@@ -5,7 +5,10 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_API_URL": "https://campusconnect-dt67.onrender.com/api"
+  }
 }
