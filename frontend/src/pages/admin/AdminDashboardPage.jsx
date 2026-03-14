@@ -67,22 +67,29 @@ export default function AdminDashboardPage() {
               {/* Monthly Signups Bar Chart */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                 <h2 className="text-white font-semibold text-sm mb-4">Monthly User Signups (last 6 months)</h2>
-                <div className="flex items-end gap-2 h-32">
-                  {analytics?.monthlySignups?.length > 0 ? (
-                    analytics.monthlySignups.map((m, i) => (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <span className="text-xs text-gray-400">{m.count}</span>
-                        <div
-                          className="w-full bg-indigo-600 rounded-t-sm transition-all"
-                          style={{ height: `${(m.count / maxSignup) * 100}%`, minHeight: '4px' }}
-                        />
-                        <span className="text-xs text-gray-500">{MONTHS[m._id.month - 1]}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-sm m-auto">No signup data yet</p>
-                  )}
-                </div>
+                {analytics?.monthlySignups?.length > 0 ? (
+                  <div className="flex items-end justify-around gap-2 h-32 border-b border-gray-800 pb-0">
+                    {analytics.monthlySignups.map((m, i) => {
+                      const heightPct = maxSignup > 0 ? Math.max((m.count / maxSignup) * 100, 8) : 8
+                      return (
+                        <div key={i} className="flex flex-col items-center gap-1 w-10">
+                          <span className="text-xs text-gray-400 font-medium">{m.count}</span>
+                          <div className="w-full flex items-end" style={{ height: '96px' }}>
+                            <div
+                              className="w-full bg-indigo-600 hover:bg-indigo-500 rounded-t transition-colors"
+                              style={{ height: `${heightPct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500 mt-1">{MONTHS[m._id.month - 1]}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center">
+                    <p className="text-gray-500 text-sm">No signup data yet</p>
+                  </div>
+                )}
               </div>
 
               {/* Top Campuses */}

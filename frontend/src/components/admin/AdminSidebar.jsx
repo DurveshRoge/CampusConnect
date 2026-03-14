@@ -3,11 +3,8 @@ import {
   LayoutDashboard,
   Building2,
   Users,
-  FileText,
   BarChart3,
-  Settings,
   Shield,
-  BookOpen,
 } from 'lucide-react'
 
 const navItems = [
@@ -15,9 +12,6 @@ const navItems = [
   { to: '/admin/campuses', icon: Building2, label: 'Campuses' },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/admin/resources', icon: BookOpen, label: 'Resources' },
-  { to: '/admin/reports', icon: FileText, label: 'Reports' },
-  { to: '/admin/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function AdminSidebar() {

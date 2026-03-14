@@ -20,6 +20,110 @@ const SOCKET_URL = import.meta.env.VITE_API_URL
 const SAVE_DEBOUNCE_MS = 3000
 const EMIT_DEBOUNCE_MS = 150
 
+// ─── Jitsi Voice Call Panel ───────────────────────────────────────────────────
+
+const JITSI_DOMAIN = 'meet.jit.si'
+
+function JitsiCall({ workspaceId, userName }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
+  const apiRef = useRef(null)
+
+  const roomName = `CampusConnectVoiceRoom_${workspaceId}`
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    if (!window.JitsiMeetExternalAPI) {
+      const script = document.createElement('script')
+      script.src = 'https://meet.jit.si/external_api.js'
+      script.async = true
+      script.onload = startConference
+      document.body.appendChild(script)
+      return () => { document.body.removeChild(script) }
+    } else {
+      startConference()
+    }
+
+    function startConference() {
+      if (apiRef.current) return // prevent duplicate instances
+
+      apiRef.current = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
+        roomName,
+        parentNode: containerRef.current,
+        width: 350,
+        height: 200,
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: true,
+          disableSimulcast: true,
+          prejoinPageEnabled: false,
+          startAudioOnly: true,
+        },
+        interfaceConfigOverwrite: {
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          SHOW_BRAND_WATERMARK: false,
+          SHOW_POWERED_BY: false,
+          TOOLBAR_BUTTONS: ['microphone', 'hangup'],
+          FILM_STRIP_MAX_HEIGHT: 0,
+        },
+        userInfo: { displayName: userName },
+      })
+
+      apiRef.current.executeCommand('toggleVideo')
+
+      apiRef.current.addListener('readyToClose', () => {
+        setIsOpen(false)
+      })
+    }
+
+    return () => {
+      if (apiRef.current) {
+        apiRef.current.dispose()
+        apiRef.current = null
+      }
+    }
+  }, [isOpen, roomName])
+
+  return createPortal(
+    <div>
+      {/* Join button — shown when call is closed */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed left-4 md:left-72 bottom-8 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl hover:scale-105 transition-transform flex items-center justify-center"
+          title="Join Voice Channel"
+        >
+          📞
+        </button>
+      )}
+
+      {/* Active call — Jitsi panel + close button */}
+      {isOpen && (
+        <>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="fixed z-50 w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-xl hover:scale-105 transition-transform flex items-center justify-center text-sm font-bold"
+            style={{ left: 'calc(var(--sidebar-offset, 16px) + 358px)', bottom: '128px' }}
+            title="Leave Voice Channel"
+          >
+            ✕
+          </button>
+          <div
+            ref={containerRef}
+            className="fixed left-4 md:left-72 bottom-32 z-50 rounded-2xl shadow-2xl overflow-hidden"
+            style={{ width: 350, height: 200 }}
+          />
+        </>
+      )}
+    </div>,
+    document.body
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 function WorkspaceDetailPage() {
   const { id } = useParams()
   const { user: currentUser } = useAuth()
@@ -48,7 +152,6 @@ function WorkspaceDetailPage() {
     enabled: showAddMember,
   })
 
-  // Parse saved tldraw snapshot (stored in `elements` field)
   const initialSnapshot = (() => {
     try { return JSON.parse(workspace?.elements || 'null') }
     catch { return null }
@@ -82,16 +185,13 @@ function WorkspaceDetailPage() {
     }
   }, [id, token])
 
-  // Called when tldraw mounts — gives us the editor instance
   const handleMount = useCallback((editor) => {
     editorRef.current = editor
 
-    // Restore previously saved canvas
     if (initialSnapshot) {
       editor.loadSnapshot(initialSnapshot)
     }
 
-    // Listen for user-driven changes and broadcast / persist them
     const unsub = editor.store.listen(
       () => {
         if (isRemoteUpdate.current) return
@@ -99,13 +199,11 @@ function WorkspaceDetailPage() {
         setSaved(false)
         const snapshot = editor.getSnapshot()
 
-        // Debounced real-time broadcast to peers
         clearTimeout(emitTimerRef.current)
         emitTimerRef.current = setTimeout(() => {
           socketRef.current?.emit('workspace:draw', { workspaceId: id, snapshot })
         }, EMIT_DEBOUNCE_MS)
 
-        // Debounced save to database
         clearTimeout(saveTimerRef.current)
         saveTimerRef.current = setTimeout(async () => {
           try {
@@ -121,14 +219,12 @@ function WorkspaceDetailPage() {
     unsubscribeRef.current = unsub
   }, [id, queryClient, initialSnapshot])
 
-  // Cleanup on unmount
   useEffect(() => () => {
     clearTimeout(saveTimerRef.current)
     clearTimeout(emitTimerRef.current)
     unsubscribeRef.current?.()
   }, [])
 
-  // Add member handler
   const handleAddMember = async (userId) => {
     try {
       await addMember({ workspaceId: id, userId })
@@ -234,7 +330,7 @@ function WorkspaceDetailPage() {
             )}
           </div>
 
-          {/* Add member dropdown — portaled to body to escape tldraw stacking context */}
+          {/* Add member dropdown */}
           {showAddMember && createPortal(
             <div className="fixed right-6 top-28 z-[9999] bg-gray-800 border border-gray-700/60 rounded-xl shadow-2xl w-64 p-3">
               <p className="text-gray-400 text-xs font-medium mb-2">Add from your connections</p>
@@ -276,7 +372,13 @@ function WorkspaceDetailPage() {
             </div>
           , document.body)}
 
-          {/* tldraw canvas — fills remaining height */}
+          {/* Jitsi voice call — self-contained, floating phone button */}
+          <JitsiCall
+            workspaceId={id}
+            userName={currentUser?.name || 'Member'}
+          />
+
+          {/* tldraw canvas */}
           <div className="flex-1 relative overflow-hidden" style={{ minHeight: 0 }}>
             <Tldraw onMount={handleMount} />
           </div>

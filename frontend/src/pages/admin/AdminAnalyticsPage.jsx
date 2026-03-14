@@ -62,25 +62,30 @@ export default function AdminAnalyticsPage() {
             {/* Monthly Signups */}
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
               <h2 className="text-white font-semibold mb-5">User Signups — Last 6 Months</h2>
-              <div className="flex items-end gap-3 h-40">
-                {data?.monthlySignups?.length > 0 ? (
-                  data.monthlySignups.map((m, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-gray-300 text-xs font-medium">{m.count}</span>
-                      <div
-                        className="w-full rounded-t-md bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                        style={{ height: `${(m.count / maxSignup) * 100}%`, minHeight: '6px' }}
-                        title={`${MONTHS[m._id.month - 1]} ${m._id.year}: ${m.count} signups`}
-                      />
-                      <span className="text-gray-500 text-xs">{MONTHS[m._id.month - 1]}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <p className="text-gray-500 text-sm">No signup data in the last 6 months</p>
-                  </div>
-                )}
-              </div>
+              {data?.monthlySignups?.length > 0 ? (
+                <div className="flex items-end justify-around gap-3 border-b border-gray-800" style={{ height: '160px' }}>
+                  {data.monthlySignups.map((m, i) => {
+                    const heightPct = maxSignup > 0 ? Math.max((m.count / maxSignup) * 100, 6) : 6
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1 w-12">
+                        <span className="text-gray-300 text-xs font-medium">{m.count}</span>
+                        <div className="w-full flex items-end" style={{ height: '120px' }}>
+                          <div
+                            className="w-full rounded-t-md bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                            style={{ height: `${heightPct}%` }}
+                            title={`${MONTHS[m._id.month - 1]} ${m._id.year}: ${m.count} signups`}
+                          />
+                        </div>
+                        <span className="text-gray-500 text-xs mt-1">{MONTHS[m._id.month - 1]}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-40">
+                  <p className="text-gray-500 text-sm">No signup data in the last 6 months</p>
+                </div>
+              )}
             </div>
 
             {/* Top Campuses */}
