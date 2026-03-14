@@ -12,6 +12,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const messageRoutes = require('./routes/message.routes');
 const workspaceRoutes = require('./routes/workspace.routes');
 const resourceRoutes = require('./routes/resource.routes');
+const adminRoutes = require('./routes/admin.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -20,9 +21,12 @@ const app = express();
 
 app.use(
   cors({
-    origin: '*',
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://campusconnect-snowy.vercel.app', 'https://campusconnect-dt67.onrender.com']
+      : '*',
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   })
 );
 
@@ -50,6 +54,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 

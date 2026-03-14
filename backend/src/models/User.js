@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema(
     collegeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'College',
-      required: [true, 'College is required'],
+      required: function () { return this.role !== 'superAdmin'; },
     },
     bio: { type: String, maxlength: [500, 'Bio cannot exceed 500 characters'], trim: true },
     skills: { type: [String], default: [] },
@@ -52,7 +52,12 @@ const userSchema = new mongoose.Schema(
       extractedAt: { type: Date, default: null },
     },
     avatarUrl: { type: String, default: null },
-    role: { type: String, enum: ['student', 'admin', 'committee'], default: 'student' },
+    role: {
+      type: String,
+      enum: ['student', 'admin', 'committee', 'campusAdmin', 'superAdmin'],
+      default: 'student',
+    },
+    isSuspended: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

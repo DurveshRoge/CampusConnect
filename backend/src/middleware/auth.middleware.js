@@ -56,6 +56,13 @@ async function protect(req, res, next) {
       });
     }
 
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact support.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {

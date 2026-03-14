@@ -13,8 +13,11 @@ let io = null;
 function init(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      origin: process.env.NODE_ENV === 'production'
+        ? ['https://campusconnect-snowy.vercel.app', 'https://campusconnect-dt67.onrender.com']
+        : '*',
       methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
