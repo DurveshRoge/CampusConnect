@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import useUserStore from './store/userStore'
+import useAdminStore from './store/adminStore'
 import useSocket from './hooks/useSocket'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -19,6 +20,11 @@ import MessagesPage from './pages/MessagesPage'
 import WorkspacePage from './pages/WorkspacePage'
 import WorkspaceDetailPage from './pages/WorkspaceDetailPage'
 import ResourcesPage from './pages/ResourcesPage'
+import AdminLoginPage from './pages/admin/AdminLoginPage'
+import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminCampusesPage from './pages/admin/AdminCampusesPage'
+import AdminUsersPage from './pages/admin/AdminUsersPage'
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage'
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated)
@@ -35,6 +41,24 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+  return children
+}
+
+function AdminProtectedRoute({ children }) {
+  const isAuthenticated = useAdminStore((state) => state.isAuthenticated)
+  const hasHydrated = useAdminStore((state) => state._hasHydrated)
+
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />
   }
   return children
 }
@@ -65,6 +89,14 @@ function App() {
       <Route path="/events/create" element={<ProtectedRoute><CreateEventPage /></ProtectedRoute>} />
       <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
       <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+
+      {/* ── Admin Routes ─────────────────────────────────────── */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
+      <Route path="/admin/campuses" element={<AdminProtectedRoute><AdminCampusesPage /></AdminProtectedRoute>} />
+      <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>} />
+      <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminAnalyticsPage /></AdminProtectedRoute>} />
+      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
