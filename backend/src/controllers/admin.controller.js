@@ -229,7 +229,7 @@ async function getAnalytics(req, res, next) {
       totalTeams,
     ] = await Promise.all([
       College.countDocuments(),
-      College.countDocuments({ isActive: true }),
+      College.countDocuments({ isActive: { $ne: false } }),
       User.countDocuments({ role: { $in: ['student', 'committee', 'campusAdmin'] } }),
       User.countDocuments({ isSuspended: true }),
       Resource.countDocuments(),
