@@ -128,12 +128,22 @@ async function extractWithGemini(buffer) {
  * GET /api/users
  * Return all users belonging to the same college as the requesting user.
  * Supports optional ?skills=react,node query param for filtering.
+ * Excludes the current user from results.
+ * Includes connection status for each user (showing 'rejected' status as well).
  */
 async function getAllUsers(req, res, next) {
   try {
-    const collegeId = req.user.collegeId._id || req.user.collegeId;
+    // Get current user's college ID
+    const collegeId = req.user.collegeId?._id?.toString() || req.user.collegeId?.toString();
     const currentUserId = req.user._id.toString();
     const skillsParam = req.query.skills;
+
+    if (!collegeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User must have a valid college assignment.',
+      });
+    }
 
     let skillsFilter = null;
     if (skillsParam && typeof skillsParam === 'string' && skillsParam.trim() !== '') {
@@ -145,11 +155,14 @@ async function getAllUsers(req, res, next) {
 
     const users = await findUsersByCollege(collegeId, skillsFilter);
 
-    // Filter out the current user from results
-    const filteredUsers = users.filter(user => user._id.toString() !== currentUserId);
+    // Filter out the current user from results (robust string comparison)
+    const filteredUsers = users.filter(user => {
+      const userId = user._id?.toString();
+      return userId !== currentUserId;
+    });
 
-    // Build a connection status map for the current user so the frontend
-    // can show the correct ConnectionButton state and hide/show Message button
+    // Build a connection status map for the current user
+    // This includes 'pending', 'accepted', and 'rejected' statuses
     const connections = await Connection.find({
       $or: [
         { senderId: req.user._id },
@@ -159,16 +172,19 @@ async function getAllUsers(req, res, next) {
 
     const statusMap = {};
     for (const conn of connections) {
-      const otherId =
-        conn.senderId.toString() === currentUserId
-          ? conn.receiverId.toString()
-          : conn.senderId.toString();
+      const senderId = conn.senderId.toString();
+      const receiverId = conn.receiverId.toString();
+      const otherId = senderId === currentUserId ? receiverId : senderId;
       statusMap[otherId] = conn.status;
     }
 
     const usersWithStatus = filteredUsers.map((u) => {
       const obj = u.toObject({ virtuals: true });
-      return { ...obj, connectionStatus: statusMap[obj._id.toString()] || null };
+      const userId = obj._id?.toString();
+      return {
+        ...obj,
+        connectionStatus: statusMap[userId] || null,
+      };
     });
 
     res.status(200).json({

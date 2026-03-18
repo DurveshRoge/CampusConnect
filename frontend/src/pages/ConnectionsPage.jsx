@@ -62,16 +62,29 @@ function ConnectionsPage() {
 
   const { mutate: accept, isPending: accepting, variables: acceptingId } = useMutation({
     mutationFn: acceptRequest,
-    onSuccess: () => {
+    onSuccess: (acceptedConnection) => {
+      // Invalidate all connection-related queries
       queryClient.invalidateQueries({ queryKey: ['connections'] })
+      // Invalidate all users lists (with any filter) — so TeamFinderPage shows updated status
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      // Invalidate the sender's specific user profile page
+      if (acceptedConnection?.senderId?._id) {
+        queryClient.invalidateQueries({ queryKey: ['users', acceptedConnection.senderId._id.toString()] })
+      }
     },
   })
 
   const { mutate: reject, isPending: rejecting, variables: rejectingId } = useMutation({
     mutationFn: rejectRequest,
-    onSuccess: () => {
+    onSuccess: (rejectedConnection) => {
+      // Invalidate all connection-related queries
       queryClient.invalidateQueries({ queryKey: ['connections'] })
+      // Invalidate all users lists (with any filter) — so TeamFinderPage shows updated status
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      // Invalidate the sender's specific user profile page
+      if (rejectedConnection?.senderId?._id) {
+        queryClient.invalidateQueries({ queryKey: ['users', rejectedConnection.senderId._id.toString()] })
+      }
     },
   })
 

@@ -16,6 +16,7 @@ function isValidObjectId(id) {
  * POST /api/connections/send
  * Body: { receiverId }
  * Send a connection request to another user.
+ * Note: If a previous connection was rejected, it will be re-sent (status changed back to 'pending').
  */
 async function sendRequest(req, res, next) {
   try {
@@ -72,10 +73,28 @@ async function sendRequest(req, res, next) {
     });
 
     if (existing) {
+      // If rejected, allow re-sending by changing status back to pending
+      if (existing.status === 'rejected') {
+        existing.status = 'pending';
+        existing.updatedAt = new Date();
+        await existing.save();
+
+        await existing.populate([
+          { path: 'senderId', select: 'name email avatarUrl' },
+          { path: 'receiverId', select: 'name email avatarUrl' },
+        ]);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Connection request re-sent.',
+          data: { connection: existing },
+        });
+      }
+
+      // For other statuses, reject the request
       const statusMessages = {
         pending: 'A connection request is already pending between you and this user.',
         accepted: 'You are already connected with this user.',
-        rejected: 'Your previous connection request was rejected. You cannot resend at this time.',
       };
       return res.status(409).json({
         success: false,

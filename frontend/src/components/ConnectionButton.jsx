@@ -13,7 +13,7 @@ function ConnectionButton({ userId, connectionStatus }) {
     onSuccess: () => {
       setJustSent(true)
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      queryClient.invalidateQueries({ queryKey: ['user', userId] })
+      queryClient.invalidateQueries({ queryKey: ['users', userId] })
       queryClient.invalidateQueries({ queryKey: ['connections'] })
 
       // Show success toast
@@ -85,8 +85,11 @@ function ConnectionButton({ userId, connectionStatus }) {
         whileTap={{ scale: 0.95 }}
         onClick={() => mutate()}
         disabled={isPending}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-indigo-600 hover:to-violet-600 border border-gray-600 hover:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-400 hover:text-white rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md shadow-gray-600/20 hover:shadow-indigo-600/30"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full text-xs font-bold uppercase tracking-wide transition-all shadow-md shadow-indigo-600/30 hover:shadow-indigo-600/50 relative overflow-hidden group"
       >
+        {/* Rejected indicator badge */}
+        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+
         {isPending ? (
           <>
             <motion.span
@@ -98,10 +101,11 @@ function ConnectionButton({ userId, connectionStatus }) {
           </>
         ) : (
           <>
-            <span className="text-sm">➕</span>
-            Connect
+            <span className="text-sm">🔄</span>
+            Try Again
           </>
         )}
+        <span className="text-xs opacity-60 group-hover:opacity-100 transition-opacity">(Rejected)</span>
       </motion.button>
     )
   }
