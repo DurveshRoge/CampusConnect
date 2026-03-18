@@ -32,6 +32,37 @@
   }
 }
 
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s ease-in-out infinite;
+  background: linear-gradient(90deg, #374151 0%, #4b5563 50%, #374151 100%);
+  background-size: 200% 100%;
+}
+
+/* Focus ring for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-gray-900 transition-shadow;
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* Skip to content link for a11y */
+.skip-link {
+  @apply absolute -top-10 left-4 bg-indigo-600 text-white px-4 py-2 rounded-lg z-50 transition-all;
+}
+
+.skip-link:focus {
+  @apply top-4;
+}
+
 /* Excalidraw canvas fixes */
 .excalidraw .App-menu_top .buttonList {
   gap: 0.5rem;

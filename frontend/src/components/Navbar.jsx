@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
 import useAuth from '../hooks/useAuth'
 import { getInitials } from '../utils/helpers'
 import NotificationsDropdown from './NotificationsDropdown'
@@ -13,13 +14,19 @@ function NavLink({ to, children }) {
   return (
     <Link
       to={to}
-      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-        isActive
-          ? 'bg-indigo-600 text-white'
-          : 'text-gray-300 hover:text-white hover:bg-gray-700'
-      }`}
+      className="relative px-3 py-2 text-sm font-medium transition-colors text-gray-300 hover:text-white group"
     >
       {children}
+      {isActive && (
+        <motion.div
+          layoutId="navbar-indicator"
+          className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-violet-500"
+          transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+        />
+      )}
+      {!isActive && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-600 scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+      )}
     </Link>
   )
 }
@@ -58,13 +65,26 @@ function Navbar() {
   }, [])
 
   return (
-    <nav className="bg-gray-900 border-b border-gray-700/60 fixed top-0 left-0 right-0 z-50 shadow-lg shadow-black/20">
+    <>
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="skip-link sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-indigo-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
+      >
+        Skip to main content
+      </a>
+
+      <nav
+        className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800/50 fixed top-0 left-0 right-0 z-50 shadow-lg shadow-black/20"
+        role="navigation"
+        aria-label="Main navigation"
+      >
       <div className="max-w-full mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center space-x-2.5 group">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-600/30 group-hover:bg-indigo-500 transition-colors">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center shadow-glow-indigo group-hover:scale-105 transition-transform">
                 <span className="text-white font-bold text-sm">CC</span>
               </div>
               <span className="text-white font-bold text-lg hidden md:block tracking-tight">
@@ -97,11 +117,19 @@ function Navbar() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+                <AnimatePresence>
+                  {unreadCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-0.5 leading-none"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
 
               {notifOpen && (
@@ -184,6 +212,7 @@ function Navbar() {
         </div>
       </div>
     </nav>
+    </>
   )
 }
 

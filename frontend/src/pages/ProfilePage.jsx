@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 import useAuth from '../hooks/useAuth'
@@ -20,7 +22,6 @@ function ProfilePage() {
     skills: '',
     projects: '',
   })
-  const [successMsg, setSuccessMsg] = useState('')
   const [formError, setFormError] = useState('')
   const [resumeError, setResumeError] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -48,16 +49,11 @@ function ProfilePage() {
   useEffect(() => {
     const currentAt = user?.resumeData?.extractedAt ?? null
     if (currentAt && currentAt !== prevExtractedAt.current) {
-      showSuccess('AI analysis complete! Skills have been updated.')
+      toast.success('AI analysis complete! Skills have been updated.')
     }
     prevExtractedAt.current = currentAt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.resumeData?.extractedAt])
-
-  const showSuccess = (msg) => {
-    setSuccessMsg(msg)
-    setTimeout(() => setSuccessMsg(''), 4000)
-  }
 
   const { mutate: updateMutate, isPending: updating } = useMutation({
     mutationFn: updateProfile,
@@ -65,11 +61,13 @@ function ProfilePage() {
       // service returns the user object directly
       updateUser(updatedUser)
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      showSuccess('Profile updated successfully!')
+      toast.success('Profile updated successfully!')
       setFormError('')
     },
     onError: (err) => {
-      setFormError(err.response?.data?.message || 'Failed to update profile.')
+      const msg = err.response?.data?.message || 'Failed to update profile.'
+      setFormError(msg)
+      toast.error(msg)
     },
   })
 
@@ -79,10 +77,11 @@ function ProfilePage() {
       // service returns { avatarUrl, user }
       updateUser({ avatarUrl: data.avatarUrl })
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      showSuccess('Profile picture updated!')
+      toast.success('Profile picture updated!')
     },
     onError: (err) => {
-      setFormError(err.response?.data?.message || 'Failed to upload avatar.')
+      const msg = err.response?.data?.message || 'Failed to upload avatar.'
+      toast.error(msg)
     },
   })
 
@@ -97,11 +96,13 @@ function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setResumeError('')
       setAiAnalyzing(true)   // socket 'resume:analyzed' (via useSocket.js) will clear this
-      showSuccess('Resume uploaded! AI analysis running in background...')
+      toast.success('Resume uploaded! AI analysis running...')
     },
     onError: (err) => {
       setAiAnalyzing(false)
-      setResumeError(err.response?.data?.message || 'Failed to upload resume. Please try again.')
+      const msg = err.response?.data?.message || 'Failed to upload resume. Please try again.'
+      setResumeError(msg)
+      toast.error(msg)
     },
   })
 
@@ -116,10 +117,12 @@ function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setResumeError('')
       setAiAnalyzing(false)
-      showSuccess('Resume deleted successfully.')
+      toast.success('Resume deleted successfully.')
     },
     onError: (err) => {
-      setResumeError(err.response?.data?.message || 'Failed to delete resume.')
+      const msg = err.response?.data?.message || 'Failed to delete resume.'
+      setResumeError(msg)
+      toast.error(msg)
     },
   })
 
@@ -193,6 +196,21 @@ function ProfilePage() {
     if (resumeInputRef.current) resumeInputRef.current.value = ''
   }
 
+  // Skill color mapping
+  const getSkillColor = (index) => {
+    const colors = [
+      'bg-indigo-900/40 border-indigo-700/40 text-indigo-300',
+      'bg-violet-900/40 border-violet-700/40 text-violet-300',
+      'bg-blue-900/40 border-blue-700/40 text-blue-300',
+      'bg-cyan-900/40 border-cyan-700/40 text-cyan-300',
+      'bg-green-900/40 border-green-700/40 text-green-300',
+      'bg-emerald-900/40 border-emerald-700/40 text-emerald-300',
+      'bg-purple-900/40 border-purple-700/40 text-purple-300',
+      'bg-pink-900/40 border-pink-700/40 text-pink-300',
+    ]
+    return colors[index % colors.length]
+  }
+
   const previewSkills = formData.skills
     .split(',')
     .map((s) => s.trim())
@@ -203,59 +221,38 @@ function ProfilePage() {
       <Navbar />
       <div className="flex pt-16">
         <Sidebar />
-        <main className="flex-1 md:ml-64 p-6">
-          <div className="max-w-2xl mx-auto">
+        <main className="flex-1 md:ml-64">
 
-            {/* Page header */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-white">My Profile</h1>
-              <p className="text-gray-400 mt-1 text-sm">
-                Update your personal information and manage your account settings.
-              </p>
-            </div>
+          {/* Cover Banner */}
+          <div className="relative h-48 bg-gradient-to-r from-indigo-600/30 via-violet-600/30 to-purple-600/30 border-b border-indigo-700/30">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/60" />
+          </div>
 
-            {/* Global success / error */}
-            {successMsg && (
-              <div className="flex items-center gap-2.5 bg-green-900/30 border border-green-700/50 text-green-400 px-4 py-3 rounded-xl text-sm mb-5">
-                <span>✓</span>
-                {successMsg}
-              </div>
-            )}
-            {formError && (
-              <div className="flex items-center gap-2.5 bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-3 rounded-xl text-sm mb-5">
-                <span>⚠️</span>
-                {formError}
-              </div>
-            )}
-
-            {/* Avatar Section */}
-            <div className="bg-gray-800 border border-gray-700/60 rounded-2xl p-6 mb-5">
-              <h2 className="text-white font-semibold mb-4">Profile Picture</h2>
-              <div className="flex items-center gap-5">
-                <div className="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden ring-4 ring-indigo-600/20 flex-shrink-0">
-                  {user?.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name}
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span>{getInitials(user?.name || '')}</span>
-                  )}
-                </div>
-                <div>
-                  <label
-                    className={`cursor-pointer inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${uploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                  >
-                    {uploadingAvatar ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-t-white border-white/30 rounded-full animate-spin" />
-                        Uploading...
-                      </>
+          <div className="max-w-4xl mx-auto px-6 -mt-20 relative">
+            {/* Profile Header Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-gray-800 border border-gray-700/60 rounded-2xl p-6 mb-6"
+            >
+              <div className="flex flex-col md:flex-row md:items-start gap-6">
+                {/* Avatar */}
+                <div className="relative group">
+                  <div className="w-32 h-32 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-4xl overflow-hidden ring-4 ring-indigo-600/30 flex-shrink-0">
+                    {user?.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        className="w-32 h-32 rounded-full object-cover"
+                      />
                     ) : (
-                      <>📷 Change Photo</>
+                      <span>{getInitials(user?.name || '')}</span>
                     )}
+                  </div>
+                  {/* Change photo button overlay */}
+                  <label className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center">
+                    <span className="text-white text-xs font-medium">📷 Change</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -264,10 +261,71 @@ function ProfilePage() {
                       disabled={uploadingAvatar}
                     />
                   </label>
-                  <p className="text-gray-500 text-xs mt-2">JPG, PNG, GIF — max 5MB</p>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-3xl font-bold text-white mb-2">{user?.name}</h1>
+                  <p className="text-gray-400 text-sm mb-4">{user?.email}</p>
+
+                  {/* Points & Badges */}
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 bg-yellow-900/40 border border-yellow-700/40 px-4 py-2 rounded-full">
+                      <span className="text-yellow-400 text-lg">⭐</span>
+                      <div>
+                        <p className="text-yellow-300 text-sm font-bold">{user?.points || 0}</p>
+                        <p className="text-yellow-500 text-xs">Points</p>
+                      </div>
+                    </div>
+
+                    {user?.badges && user.badges.length > 0 && (
+                      <>
+                        {user.badges.slice(0, 3).map((badge, idx) => (
+                          <div key={idx} className="flex items-center gap-2 bg-indigo-900/40 border border-indigo-700/40 px-4 py-2 rounded-full">
+                            <span className="text-lg">🏆</span>
+                            <span className="text-indigo-300 text-sm font-semibold">{badge}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Skills Preview */}
+                  {user?.skills && user.skills.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {user.skills.slice(0, 8).map((skill, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border ${getSkillColor(idx)}`}
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                        {user.skills.length > 8 && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium border bg-gray-700/60 border-gray-600/40 text-gray-400">
+                            +{user.skills.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            </motion.div>
+
+            {/* Error banners */}
+            {formError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2.5 bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-3 rounded-xl text-sm mb-5"
+              >
+                <span>⚠️</span>
+                {formError}
+              </motion.div>
+            )}
 
             {/* Profile Info Form */}
             <div className="bg-gray-800 border border-gray-700/60 rounded-2xl p-6 mb-5">
@@ -337,11 +395,11 @@ function ProfilePage() {
                   />
                   {/* Live skill preview */}
                   {previewSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {previewSkills.map((skill, idx) => (
                         <span
                           key={idx}
-                          className="px-2.5 py-0.5 bg-indigo-900/50 border border-indigo-700/40 text-indigo-300 rounded-full text-xs font-medium"
+                          className={`px-3 py-1 rounded-full text-xs font-medium border ${getSkillColor(idx)}`}
                         >
                           {skill}
                         </span>

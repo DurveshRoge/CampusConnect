@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 import useAuth from '../hooks/useAuth'
-import { getProjectById, likeProject, deleteProject } from '../services/projectService'
+import { getProjectById, toggleLikeProject, deleteProject } from '../services/projectService'
 
 function ProjectDetailPage() {
   const { id } = useParams()
@@ -17,7 +17,7 @@ function ProjectDetailPage() {
   })
 
   const likeMutation = useMutation({
-    mutationFn: () => likeProject(id),
+    mutationFn: () => toggleLikeProject(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects', id] }),
   })
 

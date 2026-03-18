@@ -1,10 +1,15 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
+import EmptyState from '../components/ui/EmptyState'
+import { ResourceSkeleton } from '../components/ui/Skeleton'
 import useAuth from '../hooks/useAuth'
 import { getResources, uploadResource, downloadResource, deleteResource } from '../services/resourceService'
+import { staggerContainer, staggerItem, modalVariants, backdropVariants } from '../lib/motion'
 
 const BRANCHES = [
   'Computer Engineering', 'Information Technology', 'Electronics', 'Mechanical',
@@ -50,18 +55,33 @@ function UploadModal({ onClose, onSuccess }) {
       Object.entries(form).forEach(([k, v]) => fd.append(k, v))
       fd.append('file', file)
       await uploadResource(fd)
+      toast.success('Resource uploaded successfully!')
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err?.response?.data?.message || 'Upload failed. Please try again.')
+      const msg = err?.response?.data?.message || 'Upload failed. Please try again.'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700/60 rounded-2xl w-full max-w-lg shadow-2xl">
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      variants={backdropVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+    >
+      <motion.div
+        className="bg-gray-900 border border-gray-700/60 rounded-2xl w-full max-w-lg shadow-2xl"
+        variants={modalVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/60">
           <h2 className="text-white font-semibold text-lg">Upload Resource</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">×</button>
@@ -148,24 +168,35 @@ function UploadModal({ onClose, onSuccess }) {
           </div>
 
           <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors">
-              Cancel
-            </button>
-            <button
-              type="submit" disabled={uploading}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium transition-colors"
             >
+              Cancel
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={uploading}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+            >
+              {uploading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {uploading ? 'Uploading...' : 'Upload'}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 function ResourceCard({ resource, currentUserId, onDelete }) {
   const [downloading, setDownloading] = useState(false)
+  const [showAiSummary, setShowAiSummary] = useState(false)
 
   const handleDownload = async () => {
     setDownloading(true)
@@ -178,8 +209,9 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
+      toast.success('Download started!')
     } catch {
-      alert('Failed to download. Please try again.')
+      toast.error('Failed to download. Please try again.')
     } finally {
       setDownloading(false)
     }
@@ -189,7 +221,11 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
   const isOwner = resource.uploadedBy?._id === currentUserId || resource.uploadedBy?._id?.toString() === currentUserId
 
   return (
-    <div className="bg-gray-800/60 border border-gray-700/50 rounded-2xl p-5 flex flex-col gap-3 hover:border-indigo-500/40 transition-colors">
+    <motion.div
+      whileHover={{ y: -4, boxShadow: '0 12px 30px rgba(79,70,229,0.15)' }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className="bg-gray-800/60 border border-gray-700/50 rounded-2xl p-5 flex flex-col gap-3 hover:border-indigo-500/40 transition-colors"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0">
           <span className="text-2xl flex-shrink-0 mt-0.5">{icon}</span>
@@ -197,11 +233,6 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
             <h3 className="text-white font-semibold text-sm leading-snug truncate">{resource.title}</h3>
             {resource.description && (
               <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{resource.description}</p>
-            )}
-            {!resource.description && resource.aiSummary && (
-              <p className="text-gray-500 text-xs mt-0.5 line-clamp-3 italic">
-                🤖 {resource.aiSummary}
-              </p>
             )}
           </div>
         </div>
@@ -216,13 +247,38 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
         )}
       </div>
 
+      {/* AI Summary Accordion */}
+      {resource.aiSummary && (
+        <div className="bg-indigo-900/20 border border-indigo-700/30 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowAiSummary(!showAiSummary)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs text-indigo-300 hover:bg-indigo-900/30 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <span>🤖</span> AI Summary
+            </span>
+            <span className="text-indigo-400">{showAiSummary ? '▲' : '▼'}</span>
+          </button>
+          {showAiSummary && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-3 pb-3"
+            >
+              <p className="text-gray-400 text-xs leading-relaxed">{resource.aiSummary}</p>
+            </motion.div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1.5">
-        <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2 py-0.5 rounded-full">{resource.subject}</span>
-        <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full">Sem {resource.semester}</span>
-        <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded-full">{resource.branch}</span>
+        <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-1 rounded-full font-medium">{resource.subject}</span>
+        <span className="bg-gray-700 text-gray-300 text-xs px-2.5 py-1 rounded-full">Sem {resource.semester}</span>
+        <span className="bg-gray-700 text-gray-300 text-xs px-2.5 py-1 rounded-full">{resource.branch}</span>
       </div>
 
-      <div className="flex items-center justify-between mt-auto pt-1">
+      <div className="flex items-center justify-between mt-auto pt-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-white text-[10px] font-semibold overflow-hidden flex-shrink-0">
             {resource.uploadedBy?.avatarUrl
@@ -234,7 +290,6 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
             <p className="text-gray-600 text-[10px]">
               {formatDistanceToNow(new Date(resource.createdAt), { addSuffix: true })}
               {resource.fileSize ? ` · ${formatBytes(resource.fileSize)}` : ''}
-              {resource.downloadsCount > 0 ? ` · ${resource.downloadsCount} downloads` : ''}
             </p>
           </div>
         </div>
@@ -246,7 +301,7 @@ function ResourceCard({ resource, currentUserId, onDelete }) {
           {downloading ? '...' : '⬇ Download'}
         </button>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -276,6 +331,10 @@ function ResourcesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] })
       setDeleteConfirm(null)
+      toast.success('Resource deleted successfully')
+    },
+    onError: () => {
+      toast.error('Failed to delete resource')
     },
   })
 
@@ -340,75 +399,95 @@ function ResourcesPage() {
 
           {/* Resource grid */}
           {isLoading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => <ResourceSkeleton key={i} />)}
             </div>
           ) : resources.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-5xl mb-4">📚</p>
-              <p className="text-white font-semibold text-lg">No resources found</p>
-              <p className="text-gray-500 text-sm mt-1">
-                {search || filterSubject || filterSemester || filterBranch
-                  ? 'Try adjusting your filters.'
-                  : 'Be the first to share study materials with your campus!'}
-              </p>
-              <button
-                onClick={() => setShowUpload(true)}
-                className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl transition-colors"
-              >
-                Upload Resource
-              </button>
-            </div>
+            <EmptyState
+              type="resources"
+              title="No resources found"
+              description={search || filterSubject || filterSemester || filterBranch
+                ? 'Try adjusting your filters.'
+                : 'Be the first to share study materials with your campus!'}
+              actionLabel="+ Upload Resource"
+              onAction={() => setShowUpload(true)}
+            />
           ) : (
             <>
               <p className="text-gray-500 text-xs mb-4">{resources.length} resource{resources.length !== 1 ? 's' : ''} found</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
                 {resources.map((r) => (
-                  <ResourceCard
-                    key={r._id}
-                    resource={r}
-                    currentUserId={currentUserId}
-                    onDelete={(id) => setDeleteConfirm(id)}
-                  />
+                  <motion.div key={r._id} variants={staggerItem}>
+                    <ResourceCard
+                      resource={r}
+                      currentUserId={currentUserId}
+                      onDelete={(id) => setDeleteConfirm(id)}
+                    />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </>
           )}
         </main>
       </div>
 
       {/* Upload modal */}
-      {showUpload && (
-        <UploadModal
-          onClose={() => setShowUpload(false)}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['resources'] })}
-        />
-      )}
+      <AnimatePresence>
+        {showUpload && (
+          <UploadModal
+            onClose={() => setShowUpload(false)}
+            onSuccess={() => queryClient.invalidateQueries({ queryKey: ['resources'] })}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Delete confirm */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-gray-900 border border-gray-700/60 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <p className="text-white font-semibold mb-2">Delete Resource?</p>
-            <p className="text-gray-400 text-sm mb-5">This will permanently remove the file. This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteMutation.mutate(deleteConfirm)}
-                disabled={deleteMutation.isPending}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <motion.div
+              className="bg-gray-900 border border-gray-700/60 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <p className="text-white font-semibold mb-2">Delete Resource?</p>
+              <p className="text-gray-400 text-sm mb-5">This will permanently remove the file. This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => deleteMutation.mutate(deleteConfirm)}
+                  disabled={deleteMutation.isPending}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
